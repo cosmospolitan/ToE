@@ -186,12 +186,13 @@ export default function Feed() {
       </div>
 
       <Button
-        className="fixed bottom-20 right-4 z-40 rounded-full w-14 h-14 shadow-lg"
-        style={{ background: "linear-gradient(135deg, hsl(270 76% 52%), hsl(340 80% 55%))" }}
+        variant="ghost"
+        className="fixed bottom-[4.25rem] right-4 z-40 rounded-full w-14 h-14 border border-border/50 text-muted-foreground"
+        style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: "transparent" }}
         onClick={() => setLocation("/create")}
         data-testid="button-create-post"
       >
-        <Plus className="w-6 h-6 text-white" />
+        <Plus className="w-6 h-6" />
       </Button>
     </div>
   );
