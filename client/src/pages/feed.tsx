@@ -183,25 +183,27 @@ export default function Feed() {
       <StoryBar />
 
       {user && (
-        <div className="border-b border-border/30 px-4 py-3" data-testid="composer-box">
+        <div className="border-b border-border px-4 py-3" data-testid="composer-box">
           <div className="flex gap-3 items-start">
-            <StatusAvatar
-              src={user.avatar}
-              fallback={user.username || "U"}
-              size="sm"
-              status={user.status}
-              isOnline={user.isOnline}
-              lastSeen={user.lastSeen}
-              showStatus={false}
-            />
+            <div className="pt-1">
+              <StatusAvatar
+                src={user.avatar}
+                fallback={user.username || "U"}
+                size="sm"
+                status={user.status}
+                isOnline={user.isOnline}
+                lastSeen={user.lastSeen}
+                showStatus={false}
+              />
+            </div>
             <div className="flex-1 min-w-0">
               <Textarea
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
                 onFocus={() => setComposerExpanded(true)}
                 placeholder="What's happening?"
-                className="resize-none border-0 bg-transparent text-sm focus-visible:ring-0 min-h-[36px] p-0 placeholder:text-muted-foreground/60"
-                style={{ height: composerExpanded ? "80px" : "36px" }}
+                className="resize-none border-0 bg-transparent text-base focus-visible:ring-0 placeholder:text-muted-foreground"
+                style={{ minHeight: composerExpanded ? "80px" : "40px", paddingLeft: 0, paddingRight: 0 }}
                 data-testid="input-post-content"
               />
 
@@ -211,8 +213,8 @@ export default function Feed() {
                     type="text"
                     value={postImageUrl}
                     onChange={(e) => setPostImageUrl(e.target.value)}
-                    placeholder="Image URL"
-                    className="w-full bg-transparent border-b border-border/30 px-0 py-1.5 text-xs outline-none placeholder:text-muted-foreground/50"
+                    placeholder="Paste image URL..."
+                    className="w-full bg-muted/50 rounded-md px-3 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
                     data-testid="input-image-url"
                   />
                   {postImageUrl && (
@@ -221,24 +223,24 @@ export default function Feed() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center justify-between gap-2 mt-1 pt-2 border-t border-border/40">
                 <div className="flex items-center gap-0.5">
                   <Button size="icon" variant="ghost" onClick={() => { setComposerExpanded(true); setShowComposerMedia(!showComposerMedia); }} data-testid="button-add-image">
-                    <Image className="w-4 h-4 text-primary/70" />
+                    <Image className="w-[18px] h-[18px] text-primary" />
                   </Button>
                   <Button size="icon" variant="ghost" data-testid="button-add-video">
-                    <Video className="w-4 h-4 text-primary/70" />
+                    <Video className="w-[18px] h-[18px] text-primary" />
                   </Button>
                   <Button size="icon" variant="ghost" data-testid="button-add-audio">
-                    <Music className="w-4 h-4 text-primary/70" />
+                    <Music className="w-[18px] h-[18px] text-primary" />
                   </Button>
                   {composerExpanded && (
                     <div className="flex items-center gap-1 ml-1">
-                      <Lock className="w-3 h-3 text-muted-foreground/50" />
+                      <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                       <select
                         value={postCoinCost}
                         onChange={(e) => setPostCoinCost(Number(e.target.value))}
-                        className="bg-transparent text-muted-foreground text-[10px] outline-none"
+                        className="bg-transparent text-muted-foreground text-xs outline-none"
                         data-testid="select-coin-cost"
                       >
                         <option value={0}>Free</option>
@@ -252,7 +254,7 @@ export default function Feed() {
                 </div>
                 <Button
                   size="sm"
-                  className="rounded-full px-4"
+                  className="rounded-full px-5"
                   disabled={!postContent.trim() || createPostMutation.isPending}
                   onClick={() => createPostMutation.mutate()}
                   data-testid="button-publish-post"
