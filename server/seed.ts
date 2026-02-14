@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, posts, investments, plugins, games } from "@shared/schema";
+import { users, posts, investments, plugins, games, tournaments } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -44,6 +44,21 @@ export async function seed() {
     { title: "Battle Royale X", description: "Last player standing wins the prize pool", category: "action", players: 12000, rating: 46, isLive: true },
     { title: "Card Legends", description: "Collectible card game with NFT integration", category: "strategy", players: 4500, rating: 43, isLive: false },
     { title: "Space Miners", description: "Mine asteroids and trade resources", category: "adventure", players: 2800, rating: 41, isLive: false },
+  ]);
+
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const in3days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const in5days = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+
+  await db.insert(tournaments).values([
+    { title: "Cyber Arena Championship", description: "The ultimate battle royale showdown - last player standing wins the grand prize pool", gameTitle: "Cyber Arena", prizePool: 25000, entryFee: 50, maxPlayers: 64, currentPlayers: 42, status: "active", startsAt: now, endsAt: in3days },
+    { title: "Chain Masters Grand Prix", description: "Compete in strategic blockchain-based challenges for massive rewards", gameTitle: "Chain Masters", prizePool: 15000, entryFee: 25, maxPlayers: 128, currentPlayers: 87, status: "active", startsAt: now, endsAt: nextWeek },
+    { title: "Speed Rush Tournament", description: "High-speed racing competition with play-to-earn crypto prizes", gameTitle: "Speed Rush", prizePool: 10000, entryFee: 30, maxPlayers: 32, currentPlayers: 28, status: "active", startsAt: now, endsAt: in5days },
+    { title: "Puzzle Master Weekly", description: "Weekly brain-teaser competition - solve puzzles faster than anyone else", gameTitle: "Puzzle Master", prizePool: 5000, entryFee: 10, maxPlayers: 256, currentPlayers: 134, status: "upcoming", startsAt: tomorrow, endsAt: nextWeek },
+    { title: "Battle Royale Showdown", description: "Free-to-enter battle royale with a growing community prize pool", gameTitle: "Battle Royale X", prizePool: 50000, entryFee: 0, maxPlayers: 200, currentPlayers: 156, status: "upcoming", startsAt: in3days, endsAt: new Date(in3days.getTime() + 2 * 24 * 60 * 60 * 1000) },
+    { title: "Card Legends Invitational", description: "Elite card game tournament for top-ranked players only", gameTitle: "Card Legends", prizePool: 8000, entryFee: 100, maxPlayers: 16, currentPlayers: 14, status: "active", startsAt: now, endsAt: tomorrow },
   ]);
 
   console.log("Database seeded successfully");

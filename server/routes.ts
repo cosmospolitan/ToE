@@ -5,6 +5,7 @@ import {
   signupSchema, loginSchema,
   insertPostSchema, insertChatMessageSchema, insertInvestmentSchema,
   insertPluginSchema, insertGameSchema, insertCommentSchema, insertMessageSchema,
+  insertTournamentSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 
@@ -355,31 +356,46 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/chat", async (req, res) => {
+  app.get("/api/chat", requireAuth, async (req, res) => {
     try {
-      const userId = req.session.userId || (req.query.userId as string) || "demo-user";
-      const msgs = await storage.getChatMessages(userId);
+      const msgs = await storage.getChatMessages(req.session.userId!);
       res.json(msgs);
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch messages" });
     }
   });
 
-  app.post("/api/chat", async (req, res) => {
+  app.post("/api/chat", requireAuth, async (req, res) => {
     try {
-      const userId = req.session.userId || "demo-user";
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
       const data = insertChatMessageSchema.parse({ ...req.body, userId });
       const userMsg = await storage.createChatMessage(data);
 
+      const userInvestments = await storage.getInvestmentsByUser(userId);
+      const totalInvested = userInvestments.reduce((s, i) => s + i.amount, 0);
+      const avgReturn = userInvestments.length > 0 ? (userInvestments.reduce((s, i) => s + (i.returnRate || 0), 0) / userInvestments.length).toFixed(1) : "0";
+
       const aiResponses: Record<string, string> = {
-        "Generate a business plan": "I'd be happy to help you create a business plan! Let's start with your core idea. What product or service would you like to build? I'll help you outline the market opportunity, revenue model, and growth strategy.",
-        "Find trending plugins": "Here are the top trending plugins right now:\n\n1. CryptoPool - Liquidity pooling (12.4K downloads)\n2. MAGA - Market Analytics (15.6K downloads)\n3. CopyX - Copy Trading (8.9K downloads)\n\nWould you like details on any of these?",
-        "Analyze my investments": "Let me analyze your portfolio:\n\nTotal Value: 15,290 coins\nTotal Return: +22.8%\nBest Performer: CryptoPool Plugin (+35%)\n\nYour portfolio is well-diversified across users and plugins. Consider increasing allocation to high-rating users for stable returns.",
-        "Create a workspace": "I'll help you set up a new workspace! The plugin editor supports:\n\n- Visual node-based workflows\n- Custom triggers and actions\n- API integrations\n- Automated testing\n\nShall I guide you through creating your first plugin?",
+        "Generate a business plan": `Great idea, ${user?.displayName || "there"}! Let's build your business plan:\n\n1. Define your core product/service\n2. Identify target market and competitors\n3. Revenue model (subscriptions, coins, or marketplace fees)\n4. Growth strategy using SuperApp's 50K+ user base\n5. Financial projections\n\nWhat's your product idea? I'll help you flesh it out with market data.`,
+        "Find trending plugins": "Here are today's trending plugins:\n\n1. CryptoPool - Liquidity pooling (12.4K downloads, +35% ROI)\n2. MAGA - Market Analytics & Governance (15.6K downloads)\n3. CopyX - Social Copy Trading (8.9K downloads)\n4. UniNations - Decentralized Governance (6.2K downloads)\n\nYour portfolio would benefit most from CryptoPool based on your current allocation. Want me to analyze the investment potential?",
+        "Analyze my investments": `Here's your portfolio analysis, ${user?.displayName || "there"}:\n\nActive Investments: ${userInvestments.length}\nTotal Invested: ${totalInvested.toLocaleString()} coins\nAverage Return: ${avgReturn}%\nCoin Balance: ${user?.coins?.toLocaleString() || 0}\n\n${userInvestments.length > 0 ? userInvestments.map(i => `- ${i.targetName}: ${i.amount} coins (${(i.returnRate || 0) >= 0 ? '+' : ''}${i.returnRate}%)`).join('\n') : 'No active investments yet.'}\n\nRecommendation: Consider diversifying across both users and plugins for optimal risk-adjusted returns.`,
+        "Create a workspace": `Let's set up your workspace, ${user?.displayName || "there"}! The plugin builder supports:\n\n- Visual node-based workflow editor\n- Custom triggers (webhook, schedule, event-based)\n- Processing nodes (code, AI, data transform)\n- Output actions (API call, notification, trade)\n\nYou already have access to the Plugin Editor in the Workspace tab. Try connecting a Trigger node to a Process node to start building your first automation.`,
       };
 
-      const responseContent = aiResponses[data.content] ||
-        `I understand you're asking about "${data.content}". That's a great question! Let me help you with that. Based on the current market trends and your profile, I'd recommend exploring our marketplace for relevant tools and connecting with top-rated users in this space. Would you like me to provide more specific recommendations?`;
+      const lc = data.content.toLowerCase();
+      let responseContent = aiResponses[data.content];
+      if (!responseContent) {
+        if (lc.includes("invest") || lc.includes("portfolio")) {
+          responseContent = `Based on your profile (${user?.coins?.toLocaleString() || 0} coins, ${userInvestments.length} active investments), here's my advice:\n\nYour current return rate averages ${avgReturn}%. ${Number(avgReturn) > 10 ? "That's strong performance!" : "Consider rebalancing for better returns."}\n\nTop opportunities right now:\n- High-rated users (45+ rating) for stable 15-25% returns\n- CryptoPool plugin for higher-risk 30%+ potential\n\nWould you like me to suggest specific investment amounts?`;
+        } else if (lc.includes("game") || lc.includes("tournament")) {
+          responseContent = `Check out the Gaming section for active tournaments! You can earn prizes by competing.\n\nTips for maximizing earnings:\n- Join tournaments with lower entry fees to start\n- Practice in free games first\n- Compete in tournaments matching your skill level\n\nYour current balance of ${user?.coins?.toLocaleString() || 0} coins gives you plenty of entry opportunities.`;
+        } else if (lc.includes("plugin") || lc.includes("workspace") || lc.includes("build")) {
+          responseContent = `I can help you with plugins and workspace tools!\n\nYour options:\n1. Browse the Marketplace for 100+ ready-to-use plugins\n2. Build your own using the visual Plugin Editor\n3. Invest in trending plugins for passive returns\n\nPopular categories: Finance, Analytics, Social, Automation\n\nWant me to recommend plugins based on your interests?`;
+        } else {
+          responseContent = `Thanks for your question, ${user?.displayName || "there"}! I can help you with:\n\n- Investment analysis and portfolio recommendations\n- Plugin discovery and workspace setup\n- Tournament strategy and gaming tips\n- Business planning and growth strategies\n- Social features and networking\n\nYour account: ${user?.coins?.toLocaleString() || 0} coins | ${userInvestments.length} investments | Rating: ${user?.rating || 0}\n\nWhat would you like to explore?`;
+        }
+      }
 
       const aiMsg = await storage.createChatMessage({
         userId,
@@ -393,22 +409,70 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/investments", async (_req, res) => {
+  app.get("/api/investments", requireAuth, async (req, res) => {
     try {
-      const invs = await storage.getInvestments();
+      const invs = await storage.getInvestmentsByUser(req.session.userId!);
       res.json(invs);
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch investments" });
     }
   });
 
-  app.post("/api/investments", async (req, res) => {
+  app.post("/api/investments", requireAuth, async (req, res) => {
     try {
-      const data = insertInvestmentSchema.parse(req.body);
-      const inv = await storage.createInvestment(data);
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const { targetType, targetId, targetName, amount } = req.body;
+      if (!amount || amount <= 0) return res.status(400).json({ error: "Invalid amount" });
+      if ((user.coins || 0) < amount) return res.status(400).json({ error: "Insufficient coins" });
+
+      await storage.updateUserCoins(req.session.userId!, -amount);
+      const returnRate = Math.floor(Math.random() * 40) - 5;
+      const inv = await storage.createInvestment({
+        investorId: req.session.userId!,
+        targetType,
+        targetId,
+        targetName,
+        amount,
+        returnRate,
+        status: "active",
+      });
       res.json(inv);
     } catch (e) {
       res.status(400).json({ error: "Invalid investment data" });
+    }
+  });
+
+  app.post("/api/investments/:id/withdraw", requireAuth, async (req, res) => {
+    try {
+      const invs = await storage.getInvestmentsByUser(req.session.userId!);
+      const inv = invs.find(i => i.id === req.params.id);
+      if (!inv) return res.status(404).json({ error: "Investment not found" });
+      const returnAmount = Math.floor(inv.amount * (1 + (inv.returnRate || 0) / 100));
+      await storage.updateUserCoins(req.session.userId!, returnAmount);
+      res.json({ withdrawn: returnAmount });
+    } catch (e) {
+      res.status(400).json({ error: "Failed to withdraw" });
+    }
+  });
+
+  app.get("/api/user/reactions", requireAuth, async (req, res) => {
+    try {
+      const postIds = await storage.getUserReactions(req.session.userId!);
+      res.json(postIds);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch reactions" });
+    }
+  });
+
+  app.get("/api/stories", requireAuth, async (req, res) => {
+    try {
+      const followedUsers = await storage.getFollowedUsers(req.session.userId!);
+      const allUsers = await storage.getTopUsers();
+      const storyUsers = followedUsers.length > 0 ? followedUsers : allUsers.slice(0, 6);
+      res.json(storyUsers.map(u => { const { passwordHash: _, ...safe } = u; return safe; }));
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch stories" });
     }
   });
 
@@ -447,6 +511,73 @@ export async function registerRoutes(
       res.json(game);
     } catch (e) {
       res.status(400).json({ error: "Invalid game data" });
+    }
+  });
+
+  app.get("/api/tournaments", async (_req, res) => {
+    try {
+      const tournamentList = await storage.getTournaments();
+      res.json(tournamentList);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch tournaments" });
+    }
+  });
+
+  app.get("/api/tournaments/:id", async (req, res) => {
+    try {
+      const t = await storage.getTournament(req.params.id);
+      if (!t) return res.status(404).json({ error: "Tournament not found" });
+      const entries = await storage.getTournamentEntries(req.params.id);
+      let joined = false;
+      if (req.session.userId) {
+        const entry = await storage.getUserTournamentEntry(req.params.id, req.session.userId);
+        joined = !!entry;
+      }
+      res.json({ ...t, entries, joined });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch tournament" });
+    }
+  });
+
+  app.post("/api/tournaments/:id/join", requireAuth, async (req, res) => {
+    try {
+      const t = await storage.getTournament(req.params.id);
+      if (!t) return res.status(404).json({ error: "Tournament not found" });
+      const existing = await storage.getUserTournamentEntry(req.params.id, req.session.userId!);
+      if (existing) return res.status(400).json({ error: "Already joined" });
+      if ((t.currentPlayers || 0) >= (t.maxPlayers || 100)) return res.status(400).json({ error: "Tournament is full" });
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const fee = t.entryFee || 0;
+      if (fee > 0 && (user.coins || 0) < fee) return res.status(400).json({ error: "Insufficient coins for entry fee" });
+      const entry = await storage.joinTournament(req.params.id, req.session.userId!, fee);
+      await storage.createNotification({
+        userId: req.session.userId!,
+        type: "tournament",
+        title: "Tournament Joined",
+        body: `You joined "${t.title}" tournament`,
+      });
+      res.json(entry);
+    } catch (e) {
+      res.status(400).json({ error: "Failed to join tournament" });
+    }
+  });
+
+  app.post("/api/tournaments/:id/leave", requireAuth, async (req, res) => {
+    try {
+      await storage.leaveTournament(req.params.id, req.session.userId!);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(400).json({ error: "Failed to leave tournament" });
+    }
+  });
+
+  app.get("/api/tournaments/:id/leaderboard", async (req, res) => {
+    try {
+      const entries = await storage.getTournamentEntries(req.params.id);
+      res.json(entries);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch leaderboard" });
     }
   });
 

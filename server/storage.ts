@@ -12,9 +12,12 @@ import {
   type Investment, type InsertInvestment,
   type Plugin, type InsertPlugin,
   type Game, type InsertGame,
+  type Tournament, type InsertTournament,
+  type TournamentEntry, type InsertTournamentEntry,
   users, posts, comments, reactions, follows,
   conversations, conversationMembers, messages,
   notifications, chatMessages, investments, plugins, games,
+  tournaments, tournamentEntries,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, ilike, count } from "drizzle-orm";
@@ -71,6 +74,20 @@ export interface IStorage {
 
   getGames(): Promise<Game[]>;
   createGame(game: InsertGame): Promise<Game>;
+
+  getTournaments(): Promise<Tournament[]>;
+  getTournament(id: string): Promise<Tournament | undefined>;
+  createTournament(tournament: InsertTournament): Promise<Tournament>;
+  joinTournament(tournamentId: string, userId: string, entryFee: number): Promise<TournamentEntry>;
+  leaveTournament(tournamentId: string, userId: string): Promise<void>;
+  getTournamentEntries(tournamentId: string): Promise<(TournamentEntry & { user: User })[]>;
+  getUserTournamentEntry(tournamentId: string, userId: string): Promise<TournamentEntry | undefined>;
+  updateTournamentScore(tournamentId: string, userId: string, score: number): Promise<void>;
+
+  getInvestmentsByUser(userId: string): Promise<Investment[]>;
+  updateUserCoins(userId: string, delta: number): Promise<User | undefined>;
+  getFollowedUsers(userId: string): Promise<User[]>;
+  getUserReactions(userId: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -360,6 +377,83 @@ export class DatabaseStorage implements IStorage {
   async createGame(game: InsertGame): Promise<Game> {
     const [created] = await db.insert(games).values(game).returning();
     return created;
+  }
+
+  async getTournaments(): Promise<Tournament[]> {
+    return db.select().from(tournaments).orderBy(desc(tournaments.createdAt));
+  }
+
+  async getTournament(id: string): Promise<Tournament | undefined> {
+    const [t] = await db.select().from(tournaments).where(eq(tournaments.id, id));
+    return t;
+  }
+
+  async createTournament(tournament: InsertTournament): Promise<Tournament> {
+    const [created] = await db.insert(tournaments).values(tournament).returning();
+    return created;
+  }
+
+  async joinTournament(tournamentId: string, userId: string, entryFee: number): Promise<TournamentEntry> {
+    if (entryFee > 0) {
+      await db.update(users).set({ coins: sql`COALESCE(${users.coins}, 0) - ${entryFee}` }).where(eq(users.id, userId));
+      await db.update(tournaments).set({ prizePool: sql`${tournaments.prizePool} + ${entryFee}` }).where(eq(tournaments.id, tournamentId));
+    }
+    await db.update(tournaments).set({ currentPlayers: sql`COALESCE(${tournaments.currentPlayers}, 0) + 1` }).where(eq(tournaments.id, tournamentId));
+    const [entry] = await db.insert(tournamentEntries).values({ tournamentId, userId }).returning();
+    return entry;
+  }
+
+  async leaveTournament(tournamentId: string, userId: string): Promise<void> {
+    await db.delete(tournamentEntries).where(and(eq(tournamentEntries.tournamentId, tournamentId), eq(tournamentEntries.userId, userId)));
+    await db.update(tournaments).set({ currentPlayers: sql`GREATEST(COALESCE(${tournaments.currentPlayers}, 0) - 1, 0)` }).where(eq(tournaments.id, tournamentId));
+  }
+
+  async getTournamentEntries(tournamentId: string): Promise<(TournamentEntry & { user: User })[]> {
+    const entries = await db.select().from(tournamentEntries).where(eq(tournamentEntries.tournamentId, tournamentId)).orderBy(desc(tournamentEntries.score));
+    const result: (TournamentEntry & { user: User })[] = [];
+    for (const entry of entries) {
+      const [user] = await db.select().from(users).where(eq(users.id, entry.userId));
+      if (user) result.push({ ...entry, user });
+    }
+    return result;
+  }
+
+  async getUserTournamentEntry(tournamentId: string, userId: string): Promise<TournamentEntry | undefined> {
+    const [entry] = await db.select().from(tournamentEntries).where(
+      and(eq(tournamentEntries.tournamentId, tournamentId), eq(tournamentEntries.userId, userId))
+    );
+    return entry;
+  }
+
+  async updateTournamentScore(tournamentId: string, userId: string, score: number): Promise<void> {
+    await db.update(tournamentEntries).set({ score }).where(
+      and(eq(tournamentEntries.tournamentId, tournamentId), eq(tournamentEntries.userId, userId))
+    );
+  }
+
+  async getInvestmentsByUser(userId: string): Promise<Investment[]> {
+    return db.select().from(investments).where(eq(investments.investorId, userId)).orderBy(desc(investments.createdAt));
+  }
+
+  async updateUserCoins(userId: string, delta: number): Promise<User | undefined> {
+    const [updated] = await db.update(users).set({ coins: sql`COALESCE(${users.coins}, 0) + ${delta}` }).where(eq(users.id, userId)).returning();
+    return updated;
+  }
+
+  async getFollowedUsers(userId: string): Promise<User[]> {
+    const followingIds = await db.select({ followingId: follows.followingId }).from(follows).where(eq(follows.followerId, userId));
+    if (followingIds.length === 0) return [];
+    const result: User[] = [];
+    for (const { followingId } of followingIds) {
+      const [user] = await db.select().from(users).where(eq(users.id, followingId));
+      if (user) result.push(user);
+    }
+    return result;
+  }
+
+  async getUserReactions(userId: string): Promise<string[]> {
+    const rxns = await db.select({ postId: reactions.postId }).from(reactions).where(eq(reactions.userId, userId));
+    return rxns.map(r => r.postId).filter((id): id is string => !!id);
   }
 }
 

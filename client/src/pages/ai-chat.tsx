@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Brain,
   Hourglass,
@@ -16,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth";
 import type { ChatMessage } from "@shared/schema";
 
 const aiTools = [
@@ -26,12 +26,14 @@ const aiTools = [
 ];
 
 export default function AiChat() {
+  const { user } = useAuth();
   const [input, setInput] = useState("");
   const [activeTool, setActiveTool] = useState("Brain");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: messages, isLoading } = useQuery<ChatMessage[]>({
     queryKey: ["/api/chat"],
+    enabled: !!user,
   });
 
   const sendMutation = useMutation({
@@ -39,7 +41,6 @@ export default function AiChat() {
       const res = await apiRequest("POST", "/api/chat", {
         content,
         role: "user",
-        userId: "demo-user",
       });
       return res.json();
     },
@@ -107,7 +108,7 @@ export default function AiChat() {
                   </AvatarFallback>
                 </Avatar>
                 <div
-                  className={`max-w-[80%] px-4 py-3 rounded-md text-sm leading-relaxed ${
+                  className={`max-w-[80%] px-4 py-3 rounded-md text-sm leading-relaxed whitespace-pre-line ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-card border border-border"
@@ -139,9 +140,11 @@ export default function AiChat() {
             >
               <Sparkles className="w-10 h-10 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold mb-2">How can I help you?</h2>
+            <h2 className="text-lg font-semibold mb-2">
+              {user ? `Hi ${user.displayName}!` : "How can I help you?"}
+            </h2>
             <p className="text-sm text-muted-foreground max-w-[280px]">
-              Ask me anything, generate ideas, get marketplace recommendations, or manage your services.
+              Ask me anything about investments, plugins, games, or get personalized recommendations.
             </p>
             <div className="grid grid-cols-2 gap-3 mt-6 w-full max-w-[320px]">
               {["Generate a business plan", "Find trending plugins", "Analyze my investments", "Create a workspace"].map((s) => (

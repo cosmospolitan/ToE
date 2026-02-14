@@ -156,7 +156,35 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
 export const insertInvestmentSchema = createInsertSchema(investments).omit({ id: true, createdAt: true });
 export const insertPluginSchema = createInsertSchema(plugins).omit({ id: true });
+export const tournaments = pgTable("tournaments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  gameId: varchar("game_id"),
+  gameTitle: text("game_title"),
+  prizePool: integer("prize_pool").notNull().default(0),
+  entryFee: integer("entry_fee").default(0),
+  maxPlayers: integer("max_players").default(100),
+  currentPlayers: integer("current_players").default(0),
+  status: text("status").default("upcoming"),
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const tournamentEntries = pgTable("tournament_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tournamentId: varchar("tournament_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  score: integer("score").default(0),
+  rank: integer("rank"),
+  prize: integer("prize").default(0),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
 export const insertGameSchema = createInsertSchema(games).omit({ id: true });
+export const insertTournamentSchema = createInsertSchema(tournaments).omit({ id: true, createdAt: true });
+export const insertTournamentEntrySchema = createInsertSchema(tournamentEntries).omit({ id: true, joinedAt: true });
 
 export const signupSchema = z.object({
   username: z.string().min(3).max(30),
@@ -196,3 +224,7 @@ export type InsertPlugin = z.infer<typeof insertPluginSchema>;
 export type Plugin = typeof plugins.$inferSelect;
 export type InsertGame = z.infer<typeof insertGameSchema>;
 export type Game = typeof games.$inferSelect;
+export type InsertTournament = z.infer<typeof insertTournamentSchema>;
+export type Tournament = typeof tournaments.$inferSelect;
+export type InsertTournamentEntry = z.infer<typeof insertTournamentEntrySchema>;
+export type TournamentEntry = typeof tournamentEntries.$inferSelect;
