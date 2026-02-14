@@ -28,6 +28,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/lib/theme";
 
+function useThemeAdapter() {
+  const { theme, toggleTheme } = useTheme();
+  return { theme, setTheme: (_: string) => toggleTheme() };
+}
+
 const settingsSections = [
   {
     title: "Account",
@@ -64,7 +69,7 @@ export default function Settings() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useThemeAdapter();
   const [editMode, setEditMode] = useState(false);
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [bio, setBio] = useState(user?.bio || "");
