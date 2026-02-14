@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { StoryBar } from "@/components/story-bar";
 import { PostCard } from "@/components/post-card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusAvatar } from "@/components/status-avatar";
 import { Bell, MessageSquare, Plus, Coins, Search, Wallet, Settings, User as UserIcon, LogOut, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
@@ -79,19 +79,17 @@ export default function Feed() {
               )}
             </div>
             <div className="relative" ref={dropdownRef}>
-              <button
+              <StatusAvatar
+                src={user?.avatar}
+                fallback={user?.username || "U"}
+                size="sm"
+                status={user?.status}
+                isOnline={user?.isOnline}
+                lastSeen={user?.lastSeen}
+                showStatus={true}
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="relative"
                 data-testid="button-account"
-              >
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={user?.avatar || ""} />
-                  <AvatarFallback className="text-xs">{(user?.username || "U")[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-background ${
-                  user?.status === "online" ? "bg-green-500" : user?.status === "away" ? "bg-yellow-500" : "bg-muted-foreground/40"
-                }`} />
-              </button>
+              />
               {showDropdown && (
                 <div className="absolute right-0 top-full mt-2 w-56 bg-popover border border-border rounded-md shadow-lg z-50" data-testid="account-dropdown">
                   <div className="p-3 border-b border-border">

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusAvatar, formatLastSeen } from "@/components/status-avatar";
 import {
   ArrowLeft,
   Send,
@@ -59,13 +59,19 @@ export default function Messages() {
           <Button size="icon" variant="ghost" onClick={() => setActiveConvId(null)} data-testid="button-back-messages">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={otherUser?.avatar || ""} />
-            <AvatarFallback>{(otherUser?.username || "?")[0].toUpperCase()}</AvatarFallback>
-          </Avatar>
+          <StatusAvatar
+            src={otherUser?.avatar}
+            fallback={otherUser?.username || "?"}
+            size="sm"
+            status={otherUser?.status}
+            isOnline={otherUser?.isOnline}
+            lastSeen={otherUser?.lastSeen}
+            showStatus={true}
+            data-testid="chat-avatar"
+          />
           <div>
             <p className="text-sm font-semibold">{otherUser?.displayName || "Chat"}</p>
-            <p className="text-[10px] text-muted-foreground">{otherUser?.status || "offline"}</p>
+            <p className="text-[10px] text-muted-foreground">{formatLastSeen(otherUser?.lastSeen, otherUser?.isOnline)}</p>
           </div>
         </header>
 
@@ -149,16 +155,25 @@ export default function Messages() {
                 onClick={() => setActiveConvId(conv.id)}
                 data-testid={`conversation-${conv.id}`}
               >
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={other?.avatar || ""} />
-                  <AvatarFallback>{(other?.username || "?")[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <StatusAvatar
+                  src={other?.avatar}
+                  fallback={other?.username || "?"}
+                  size="md"
+                  status={other?.status}
+                  isOnline={other?.isOnline}
+                  lastSeen={other?.lastSeen}
+                  showStatus={true}
+                  data-testid={`conv-avatar-${conv.id}`}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{other?.displayName || "Chat"}</p>
                   <p className="text-xs text-muted-foreground truncate">
                     {conv.lastMessage?.content || "No messages yet"}
                   </p>
                 </div>
+                <span className="text-[10px] text-muted-foreground shrink-0">
+                  {formatLastSeen(other?.lastSeen, other?.isOnline)}
+                </span>
               </button>
             );
           })

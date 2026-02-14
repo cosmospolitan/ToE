@@ -3,8 +3,8 @@ import { useRoute } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusAvatar, formatLastSeen } from "@/components/status-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -36,6 +36,8 @@ interface ProfileData {
   coins: number | null;
   isVerified: boolean | null;
   status: string | null;
+  lastSeen: string | null;
+  isOnline: boolean | null;
   followersCount: number;
   followingCount: number;
   postsCount: number;
@@ -119,10 +121,17 @@ export default function Profile() {
 
       <div className="px-4 -mt-10 relative z-10">
         <div className="flex items-end justify-between gap-3 mb-3">
-          <Avatar className="w-20 h-20 border-4 border-background">
-            <AvatarImage src={profile.avatar || ""} />
-            <AvatarFallback className="text-xl">{profile.username[0].toUpperCase()}</AvatarFallback>
-          </Avatar>
+          <StatusAvatar
+            src={profile.avatar}
+            fallback={profile.username}
+            size="xl"
+            status={profile.status}
+            isOnline={profile.isOnline}
+            lastSeen={profile.lastSeen}
+            showStatus={true}
+            className="border-4 border-background rounded-full"
+            data-testid="profile-avatar"
+          />
           <div className="flex items-center gap-2 pb-1">
             {isOwnProfile ? (
               <Button variant="outline" size="sm" data-testid="button-edit-profile">
@@ -168,7 +177,10 @@ export default function Profile() {
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">@{profile.username}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm text-muted-foreground">@{profile.username}</p>
+            <span className="text-[10px] text-muted-foreground/70">{formatLastSeen(profile.lastSeen, profile.isOnline)}</span>
+          </div>
           {profile.bio && <p className="text-sm leading-relaxed">{profile.bio}</p>}
         </div>
 

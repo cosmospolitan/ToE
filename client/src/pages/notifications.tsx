@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusAvatar } from "@/components/status-avatar";
 import {
   ArrowLeft,
   Heart,
@@ -9,6 +9,9 @@ import {
   UserPlus,
   Bell,
   Check,
+  Gift,
+  Coins,
+  Trophy,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -20,6 +23,18 @@ const notifIcons: Record<string, typeof Heart> = {
   like: Heart,
   comment: MessageCircle,
   follow: UserPlus,
+  gift: Gift,
+  coin: Coins,
+  tournament: Trophy,
+};
+
+const notifColors: Record<string, string> = {
+  like: "bg-destructive",
+  comment: "bg-chart-2",
+  follow: "bg-primary",
+  gift: "bg-chart-4",
+  coin: "bg-chart-3",
+  tournament: "bg-chart-1",
 };
 
 export default function Notifications() {
@@ -96,13 +111,17 @@ export default function Notifications() {
                 data-testid={`notification-${notif.id}`}
               >
                 <div className="relative">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage src={notif.actor?.avatar || ""} />
-                    <AvatarFallback>
-                      {(notif.actor?.username || "?")[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                  <StatusAvatar
+                    src={notif.actor?.avatar}
+                    fallback={notif.actor?.username || "?"}
+                    size="md"
+                    status={notif.actor?.status}
+                    isOnline={notif.actor?.isOnline}
+                    lastSeen={notif.actor?.lastSeen}
+                    showStatus={true}
+                    data-testid={`notif-avatar-${notif.id}`}
+                  />
+                  <div className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full ${notifColors[notif.type] || "bg-primary"} flex items-center justify-center`}>
                     <Icon className="w-3 h-3 text-primary-foreground" />
                   </div>
                 </div>

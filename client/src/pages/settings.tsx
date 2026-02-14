@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { StatusAvatar, formatLastSeen } from "@/components/status-avatar";
 import {
   ArrowLeft,
   User,
@@ -161,10 +161,16 @@ export default function Settings() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <Avatar className="w-14 h-14">
-                  <AvatarImage src={user?.avatar || ""} />
-                  <AvatarFallback className="text-lg">{(user?.username || "U")[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <StatusAvatar
+                  src={user?.avatar}
+                  fallback={user?.username || "U"}
+                  size="lg"
+                  status={user?.status}
+                  isOnline={user?.isOnline}
+                  lastSeen={user?.lastSeen}
+                  showStatus={true}
+                  data-testid="settings-avatar"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-base font-semibold truncate">{user?.displayName}</p>
@@ -173,6 +179,7 @@ export default function Settings() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">@{user?.username}</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">{formatLastSeen(user?.lastSeen, user?.isOnline)}</p>
                   {user?.bio && <p className="text-xs text-muted-foreground mt-0.5">{user.bio}</p>}
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setEditMode(true)} data-testid="button-edit-profile">

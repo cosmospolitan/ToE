@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { StatusAvatar } from "@/components/status-avatar";
 import {
   Coins,
   Repeat2,
@@ -13,7 +12,6 @@ import {
   Play,
   Volume2,
   Lock,
-  Heart,
   Bookmark,
   MoreHorizontal,
   Video,
@@ -98,26 +96,28 @@ export function PostCard({ post, author }: PostCardProps) {
     giftMutation.mutate({ giftType, amount });
   };
 
-  const statusColor = author.status === "online" ? "bg-green-500" : author.status === "away" ? "bg-yellow-500" : "bg-muted-foreground/40";
-
   return (
     <div className="border-b border-border" data-testid={`post-card-${post.id}`}>
       <div className="flex items-center gap-3 px-4 py-3">
-        <button className="relative" onClick={() => setLocation(`/profile/${author.id}`)}>
-          <Avatar className="w-9 h-9">
-            <AvatarImage src={author.avatar || ""} alt={author.username} />
-            <AvatarFallback>{author.username[0].toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${statusColor} border-2 border-background`} />
-          {author.isVerified && (
-            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-              <Star className="w-2.5 h-2.5 text-primary-foreground fill-primary-foreground" />
-            </div>
-          )}
-        </button>
+        <StatusAvatar
+          src={author.avatar}
+          fallback={author.username}
+          size="sm"
+          status={author.status}
+          isOnline={author.isOnline}
+          lastSeen={author.lastSeen}
+          showStatus={true}
+          onClick={() => setLocation(`/profile/${author.id}`)}
+          data-testid={`post-avatar-${post.id}`}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setLocation(`/profile/${author.id}`)} className="font-semibold text-sm truncate">{author.displayName}</button>
+            <button onClick={() => setLocation(`/profile/${author.id}`)} className="font-semibold text-sm truncate" data-testid={`post-author-${post.id}`}>{author.displayName}</button>
+            {author.isVerified && (
+              <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
+                <Star className="w-2.5 h-2.5 text-primary-foreground fill-primary-foreground" />
+              </div>
+            )}
             {(author.rating || 0) > 0 && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 <Star className="w-2.5 h-2.5 mr-0.5 fill-chart-3 text-chart-3" />

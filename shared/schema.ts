@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   coins: integer("coins").default(100),
   isVerified: boolean("is_verified").default(false),
   status: text("status").default("online"),
+  lastSeen: timestamp("last_seen").defaultNow(),
+  isOnline: boolean("is_online").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -13,6 +13,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+  storage.updateUser(req.session.userId, { lastSeen: new Date(), isOnline: true } as any).catch(() => {});
   next();
 }
 
@@ -59,7 +60,9 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Invalid email or password" });
       }
       req.session.userId = user.id;
-      const { passwordHash: _, ...safeUser } = user;
+      await storage.updateUser(user.id, { isOnline: true, status: "online", lastSeen: new Date() } as any);
+      const updated = await storage.getUser(user.id);
+      const { passwordHash: _, ...safeUser } = updated || user;
       res.json({ user: safeUser });
     } catch (e: any) {
       res.status(400).json({ error: e.message || "Invalid login data" });
@@ -67,6 +70,10 @@ export async function registerRoutes(
   });
 
   app.post("/api/auth/logout", (req, res) => {
+    const userId = req.session.userId;
+    if (userId) {
+      storage.updateUser(userId, { isOnline: false, lastSeen: new Date() } as any).catch(() => {});
+    }
     req.session.destroy((err) => {
       if (err) return res.status(500).json({ error: "Logout failed" });
       res.json({ success: true });
@@ -662,7 +669,12 @@ export async function registerRoutes(
       if (!["online", "away", "offline"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
-      const updated = await storage.updateUser(req.session.userId!, { status } as any);
+      const isOnline = status === "online";
+      const updated = await storage.updateUser(req.session.userId!, {
+        status,
+        isOnline,
+        lastSeen: new Date(),
+      } as any);
       if (!updated) return res.status(404).json({ error: "User not found" });
       const { passwordHash: _, ...safeUser } = updated;
       res.json(safeUser);

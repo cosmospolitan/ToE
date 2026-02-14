@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { StatusAvatar } from "@/components/status-avatar";
 import { Plus } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useAuth } from "@/lib/auth";
@@ -24,15 +24,16 @@ export function StoryBar() {
             data-testid="story-add"
             onClick={() => setLocation("/create")}
           >
-            <div className="relative rounded-full">
-              <div className="bg-background rounded-full p-[2px]">
-                <Avatar className="w-14 h-14">
-                  {user?.avatar ? (
-                    <AvatarImage src={user.avatar} alt="Your Story" />
-                  ) : null}
-                  <AvatarFallback>{user?.username?.[0]?.toUpperCase() || "U"}</AvatarFallback>
-                </Avatar>
-              </div>
+            <div className="relative">
+              <StatusAvatar
+                src={user?.avatar}
+                fallback={user?.username || "U"}
+                size="lg"
+                status={user?.status}
+                isOnline={user?.isOnline}
+                lastSeen={user?.lastSeen}
+                showStatus={false}
+              />
               <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center border-2 border-background">
                 <Plus className="w-3 h-3 text-primary-foreground" />
               </div>
@@ -49,22 +50,17 @@ export function StoryBar() {
               data-testid={`story-${storyUser.id}`}
               onClick={() => setLocation(`/profile/${storyUser.id}`)}
             >
-              <div
-                className={`relative rounded-full p-[2px] ${
-                  idx < 4
-                    ? "bg-gradient-to-tr from-primary via-chart-4 to-chart-3"
-                    : "bg-muted"
-                }`}
-              >
-                <div className="bg-background rounded-full p-[2px]">
-                  <Avatar className="w-14 h-14">
-                    {storyUser.avatar ? (
-                      <AvatarImage src={storyUser.avatar} alt={storyUser.username} />
-                    ) : null}
-                    <AvatarFallback>{storyUser.username[0].toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </div>
-              </div>
+              <StatusAvatar
+                src={storyUser.avatar}
+                fallback={storyUser.username}
+                size="lg"
+                status={storyUser.status}
+                isOnline={storyUser.isOnline}
+                lastSeen={storyUser.lastSeen}
+                showStatus={true}
+                hasStory={true}
+                storyViewed={idx >= 4}
+              />
               <span className="text-[11px] text-muted-foreground truncate w-16 text-center">
                 {storyUser.username}
               </span>
