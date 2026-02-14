@@ -16,6 +16,10 @@ import {
   Bookmark,
   MoreHorizontal,
 } from "lucide-react";
+import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth";
 import type { Post, User } from "@shared/schema";
 
 interface PostCardProps {
@@ -24,12 +28,26 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, author }: PostCardProps) {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes || 0);
   const [saved, setSaved] = useState(false);
   const [showContent, setShowContent] = useState(post.coinCost === 0);
 
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/posts/${post.id}/like`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+    },
+  });
+
   const handleLike = () => {
+    if (user) {
+      likeMutation.mutate();
+    }
     setLiked(!liked);
     setLikeCount((c) => (liked ? c - 1 : c + 1));
   };
@@ -37,7 +55,7 @@ export function PostCard({ post, author }: PostCardProps) {
   return (
     <div className="border-b border-border" data-testid={`post-card-${post.id}`}>
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="relative">
+        <button className="relative" onClick={() => setLocation(`/profile/${author.id}`)}>
           <Avatar className="w-9 h-9">
             <AvatarImage src={author.avatar || ""} alt={author.username} />
             <AvatarFallback>{author.username[0].toUpperCase()}</AvatarFallback>
@@ -47,10 +65,10 @@ export function PostCard({ post, author }: PostCardProps) {
               <Star className="w-2.5 h-2.5 text-primary-foreground fill-primary-foreground" />
             </div>
           )}
-        </div>
+        </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-sm truncate">{author.displayName}</span>
+            <button onClick={() => setLocation(`/profile/${author.id}`)} className="font-semibold text-sm truncate">{author.displayName}</button>
             {(author.rating || 0) > 0 && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 <Star className="w-2.5 h-2.5 mr-0.5 fill-chart-3 text-chart-3" />
@@ -148,7 +166,7 @@ export function PostCard({ post, author }: PostCardProps) {
           <span className="text-xs font-medium min-w-[20px]">{likeCount}</span>
         </div>
 
-        <Button size="icon" variant="ghost" data-testid={`post-comment-${post.id}`}>
+        <Button size="icon" variant="ghost" onClick={() => setLocation(`/post/${post.id}`)} data-testid={`post-comment-${post.id}`}>
           <MessageCircle className="w-5 h-5" />
         </Button>
 

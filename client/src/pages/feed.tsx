@@ -4,10 +4,14 @@ import { PostCard } from "@/components/post-card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, MessageSquare, Plus, Coins } from "lucide-react";
+import { Bell, MessageSquare, Plus, Coins, Search } from "lucide-react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 import type { Post, User } from "@shared/schema";
 
 export default function Feed() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const { data: posts, isLoading: postsLoading } = useQuery<(Post & { author: User })[]>({
     queryKey: ["/api/posts"],
   });
@@ -26,13 +30,13 @@ export default function Feed() {
             SuperApp
           </h1>
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" data-testid="button-coins">
-              <Coins className="w-5 h-5 text-chart-3" />
+            <Button size="icon" variant="ghost" onClick={() => setLocation("/search")} data-testid="button-search">
+              <Search className="w-5 h-5" />
             </Button>
-            <Button size="icon" variant="ghost" data-testid="button-notifications">
+            <Button size="icon" variant="ghost" onClick={() => setLocation("/notifications")} data-testid="button-notifications">
               <Bell className="w-5 h-5" />
             </Button>
-            <Button size="icon" variant="ghost" data-testid="button-messages">
+            <Button size="icon" variant="ghost" onClick={() => setLocation("/messages")} data-testid="button-messages">
               <MessageSquare className="w-5 h-5" />
             </Button>
           </div>
@@ -79,6 +83,7 @@ export default function Feed() {
       <Button
         className="fixed bottom-20 right-4 z-40 rounded-full w-14 h-14 shadow-lg"
         style={{ background: "linear-gradient(135deg, hsl(270 76% 52%), hsl(340 80% 55%))" }}
+        onClick={() => setLocation("/create")}
         data-testid="button-create-post"
       >
         <Plus className="w-6 h-6 text-white" />

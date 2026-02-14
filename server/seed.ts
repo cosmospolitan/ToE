@@ -1,15 +1,18 @@
 import { db } from "./db";
 import { users, posts, investments, plugins, games } from "@shared/schema";
 import { sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export async function seed() {
   const existingUsers = await db.select().from(users).limit(1);
   if (existingUsers.length > 0) return;
 
+  const hash = await bcrypt.hash("password123", 10);
+
   const [user1, user2, user3] = await db.insert(users).values([
-    { username: "alex_dev", displayName: "Alex Rivera", avatar: "/images/avatar2.png", bio: "Full-stack developer & crypto enthusiast", rating: 45, coins: 5200, isVerified: true, status: "online" },
-    { username: "sarah_art", displayName: "Sarah Chen", avatar: "/images/avatar3.png", bio: "Digital artist & NFT creator", rating: 42, coins: 3800, isVerified: true, status: "online" },
-    { username: "crypto_king", displayName: "Marcus Johnson", avatar: "/images/avatar1.png", bio: "Trader | Investor | Builder", rating: 48, coins: 12000, isVerified: true, status: "away" },
+    { username: "alex_dev", email: "alex@superapp.com", passwordHash: hash, displayName: "Alex Rivera", avatar: "/images/avatar2.png", bio: "Full-stack developer & crypto enthusiast", rating: 45, coins: 5200, isVerified: true, status: "online" },
+    { username: "sarah_art", email: "sarah@superapp.com", passwordHash: hash, displayName: "Sarah Chen", avatar: "/images/avatar3.png", bio: "Digital artist & NFT creator", rating: 42, coins: 3800, isVerified: true, status: "online" },
+    { username: "crypto_king", email: "marcus@superapp.com", passwordHash: hash, displayName: "Marcus Johnson", avatar: "/images/avatar1.png", bio: "Trader | Investor | Builder", rating: 48, coins: 12000, isVerified: true, status: "away" },
   ]).returning();
 
   await db.insert(posts).values([
