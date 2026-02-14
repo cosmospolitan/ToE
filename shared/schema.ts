@@ -182,9 +182,33 @@ export const tournamentEntries = pgTable("tournament_entries", {
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
+export const gifts = pgTable("gifts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderId: varchar("sender_id").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  postId: varchar("post_id"),
+  giftType: text("gift_type").notNull().default("coin"),
+  amount: integer("amount").notNull(),
+  message: text("message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  type: text("type").notNull(),
+  amount: integer("amount").notNull(),
+  description: text("description"),
+  referenceId: varchar("reference_id"),
+  referenceType: text("reference_type"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertGameSchema = createInsertSchema(games).omit({ id: true });
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({ id: true, createdAt: true });
 export const insertTournamentEntrySchema = createInsertSchema(tournamentEntries).omit({ id: true, joinedAt: true });
+export const insertGiftSchema = createInsertSchema(gifts).omit({ id: true, createdAt: true });
+export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true });
 
 export const signupSchema = z.object({
   username: z.string().min(3).max(30),
@@ -228,3 +252,7 @@ export type InsertTournament = z.infer<typeof insertTournamentSchema>;
 export type Tournament = typeof tournaments.$inferSelect;
 export type InsertTournamentEntry = z.infer<typeof insertTournamentEntrySchema>;
 export type TournamentEntry = typeof tournamentEntries.$inferSelect;
+export type InsertGift = z.infer<typeof insertGiftSchema>;
+export type Gift = typeof gifts.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;

@@ -14,10 +14,12 @@ import {
   type Game, type InsertGame,
   type Tournament, type InsertTournament,
   type TournamentEntry, type InsertTournamentEntry,
+  type Gift, type InsertGift,
+  type Transaction, type InsertTransaction,
   users, posts, comments, reactions, follows,
   conversations, conversationMembers, messages,
   notifications, chatMessages, investments, plugins, games,
-  tournaments, tournamentEntries,
+  tournaments, tournamentEntries, gifts, transactions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql, ilike, count } from "drizzle-orm";
@@ -88,6 +90,15 @@ export interface IStorage {
   updateUserCoins(userId: string, delta: number): Promise<User | undefined>;
   getFollowedUsers(userId: string): Promise<User[]>;
   getUserReactions(userId: string): Promise<string[]>;
+
+  createGift(gift: InsertGift): Promise<Gift>;
+  getGiftsByPost(postId: string): Promise<Gift[]>;
+  getGiftsReceived(userId: string): Promise<Gift[]>;
+  getGiftsSent(userId: string): Promise<Gift[]>;
+
+  createTransaction(tx: InsertTransaction): Promise<Transaction>;
+  getTransactions(userId: string): Promise<Transaction[]>;
+  getUnreadMessageCount(userId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -454,6 +465,44 @@ export class DatabaseStorage implements IStorage {
   async getUserReactions(userId: string): Promise<string[]> {
     const rxns = await db.select({ postId: reactions.postId }).from(reactions).where(eq(reactions.userId, userId));
     return rxns.map(r => r.postId).filter((id): id is string => !!id);
+  }
+
+  async createGift(gift: InsertGift): Promise<Gift> {
+    const [created] = await db.insert(gifts).values(gift).returning();
+    return created;
+  }
+
+  async getGiftsByPost(postId: string): Promise<Gift[]> {
+    return db.select().from(gifts).where(eq(gifts.postId, postId)).orderBy(desc(gifts.createdAt));
+  }
+
+  async getGiftsReceived(userId: string): Promise<Gift[]> {
+    return db.select().from(gifts).where(eq(gifts.receiverId, userId)).orderBy(desc(gifts.createdAt));
+  }
+
+  async getGiftsSent(userId: string): Promise<Gift[]> {
+    return db.select().from(gifts).where(eq(gifts.senderId, userId)).orderBy(desc(gifts.createdAt));
+  }
+
+  async createTransaction(tx: InsertTransaction): Promise<Transaction> {
+    const [created] = await db.insert(transactions).values(tx).returning();
+    return created;
+  }
+
+  async getTransactions(userId: string): Promise<Transaction[]> {
+    return db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.createdAt)).limit(50);
+  }
+
+  async getUnreadMessageCount(userId: string): Promise<number> {
+    const memberRows = await db.select({ conversationId: conversationMembers.conversationId }).from(conversationMembers).where(eq(conversationMembers.userId, userId));
+    let total = 0;
+    for (const row of memberRows) {
+      const [result] = await db.select({ count: count() }).from(messages).where(
+        and(eq(messages.conversationId, row.conversationId), eq(messages.isRead, false), sql`${messages.senderId} != ${userId}`)
+      );
+      total += result?.count || 0;
+    }
+    return total;
   }
 }
 

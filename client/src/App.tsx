@@ -18,6 +18,8 @@ import Messages from "@/pages/messages";
 import Notifications from "@/pages/notifications";
 import SearchPage from "@/pages/search";
 import CreatePost from "@/pages/create-post";
+import Balance from "@/pages/balance";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -35,6 +37,8 @@ function Router() {
       <Route path="/notifications" component={Notifications} />
       <Route path="/search" component={SearchPage} />
       <Route path="/create" component={CreatePost} />
+      <Route path="/balance" component={Balance} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );

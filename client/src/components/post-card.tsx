@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Coins,
   Repeat2,
@@ -15,11 +16,16 @@ import {
   Heart,
   Bookmark,
   MoreHorizontal,
+  Video,
+  Mic,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 import type { Post, User } from "@shared/schema";
 
 interface PostCardProps {
@@ -27,13 +33,24 @@ interface PostCardProps {
   author: User;
 }
 
+const giftOptions = [
+  { type: "heart", label: "Heart", amount: 5 },
+  { type: "star", label: "Star", amount: 10 },
+  { type: "diamond", label: "Diamond", amount: 25 },
+  { type: "crown", label: "Crown", amount: 50 },
+  { type: "rocket", label: "Rocket", amount: 100 },
+];
+
 export function PostCard({ post, author }: PostCardProps) {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes || 0);
   const [saved, setSaved] = useState(false);
   const [showContent, setShowContent] = useState(post.coinCost === 0);
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [customGiftAmount, setCustomGiftAmount] = useState("");
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -41,6 +58,27 @@ export function PostCard({ post, author }: PostCardProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+    },
+  });
+
+  const giftMutation = useMutation({
+    mutationFn: async ({ giftType, amount }: { giftType: string; amount: number }) => {
+      const res = await apiRequest("POST", "/api/gifts", {
+        receiverId: author.id,
+        postId: post.id,
+        giftType,
+        amount,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+      setShowGiftModal(false);
+      toast({ title: "Gift Sent!", description: `Your gift was sent to ${author.displayName}` });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message || "Failed to send gift", variant: "destructive" });
     },
   });
 
@@ -52,6 +90,16 @@ export function PostCard({ post, author }: PostCardProps) {
     setLikeCount((c) => (liked ? c - 1 : c + 1));
   };
 
+  const handleSendGift = (giftType: string, amount: number) => {
+    if (amount > (user?.coins || 0)) {
+      toast({ title: "Insufficient coins", variant: "destructive" });
+      return;
+    }
+    giftMutation.mutate({ giftType, amount });
+  };
+
+  const statusColor = author.status === "online" ? "bg-green-500" : author.status === "away" ? "bg-yellow-500" : "bg-muted-foreground/40";
+
   return (
     <div className="border-b border-border" data-testid={`post-card-${post.id}`}>
       <div className="flex items-center gap-3 px-4 py-3">
@@ -60,8 +108,9 @@ export function PostCard({ post, author }: PostCardProps) {
             <AvatarImage src={author.avatar || ""} alt={author.username} />
             <AvatarFallback>{author.username[0].toUpperCase()}</AvatarFallback>
           </Avatar>
+          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${statusColor} border-2 border-background`} />
           {author.isVerified && (
-            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
               <Star className="w-2.5 h-2.5 text-primary-foreground fill-primary-foreground" />
             </div>
           )}
@@ -149,8 +198,8 @@ export function PostCard({ post, author }: PostCardProps) {
         </div>
       )}
 
-      <div className="px-4 py-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+      <div className="px-4 py-2 flex items-center justify-between gap-1">
+        <div className="flex items-center gap-0.5">
           <Button
             size="icon"
             variant="ghost"
@@ -170,11 +219,24 @@ export function PostCard({ post, author }: PostCardProps) {
           <MessageCircle className="w-5 h-5" />
         </Button>
 
+        <Button size="icon" variant="ghost" data-testid={`post-video-${post.id}`}>
+          <Video className="w-5 h-5" />
+        </Button>
+
+        <Button size="icon" variant="ghost" data-testid={`post-audio-${post.id}`}>
+          <Mic className="w-5 h-5" />
+        </Button>
+
         <Button size="icon" variant="ghost" data-testid={`post-repost-${post.id}`}>
           <Repeat2 className="w-5 h-5" />
         </Button>
 
-        <Button size="icon" variant="ghost" data-testid={`post-gift-${post.id}`}>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setShowGiftModal(true)}
+          data-testid={`post-gift-${post.id}`}
+        >
           <Gift className="w-5 h-5" />
         </Button>
 
@@ -211,6 +273,62 @@ export function PostCard({ post, author }: PostCardProps) {
           </span>
         </div>
       </div>
+
+      {showGiftModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" data-testid="gift-modal">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowGiftModal(false)} />
+          <div className="relative w-full max-w-lg bg-background border-t border-border rounded-t-xl p-4 pb-8 animate-in slide-in-from-bottom-5">
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <h3 className="text-base font-semibold">Send Gift to {author.displayName}</h3>
+              <Button size="icon" variant="ghost" onClick={() => setShowGiftModal(false)} data-testid="button-close-gift">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <Coins className="w-4 h-4 text-chart-3" />
+              <span className="text-sm text-muted-foreground">Your balance: <span className="font-semibold text-foreground">{user?.coins?.toLocaleString() || 0}</span></span>
+            </div>
+            <div className="grid grid-cols-5 gap-2 mb-4">
+              {giftOptions.map((g) => (
+                <button
+                  key={g.type}
+                  onClick={() => handleSendGift(g.type, g.amount)}
+                  className="flex flex-col items-center gap-1 p-2 rounded-md border border-border hover-elevate"
+                  disabled={giftMutation.isPending}
+                  data-testid={`gift-option-${g.type}`}
+                >
+                  <Gift className="w-5 h-5 text-primary" />
+                  <span className="text-[10px] font-medium">{g.label}</span>
+                  <span className="text-[10px] text-chart-3 font-semibold">{g.amount}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex items-center bg-muted rounded-md px-3 py-2">
+                <Coins className="w-4 h-4 text-chart-3 mr-2" />
+                <input
+                  type="number"
+                  value={customGiftAmount}
+                  onChange={(e) => setCustomGiftAmount(e.target.value)}
+                  placeholder="Custom amount"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  data-testid="input-custom-gift"
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  const amt = parseInt(customGiftAmount);
+                  if (amt > 0) handleSendGift("custom", amt);
+                }}
+                disabled={!customGiftAmount || giftMutation.isPending}
+                data-testid="button-send-custom-gift"
+              >
+                {giftMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

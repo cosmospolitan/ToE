@@ -5,7 +5,7 @@ import {
   signupSchema, loginSchema,
   insertPostSchema, insertChatMessageSchema, insertInvestmentSchema,
   insertPluginSchema, insertGameSchema, insertCommentSchema, insertMessageSchema,
-  insertTournamentSchema,
+  insertTournamentSchema, insertGiftSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 
@@ -578,6 +578,96 @@ export async function registerRoutes(
       res.json(entries);
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch leaderboard" });
+    }
+  });
+
+  app.post("/api/gifts", requireAuth, async (req, res) => {
+    try {
+      const sender = await storage.getUser(req.session.userId!);
+      if (!sender) return res.status(404).json({ error: "User not found" });
+      const { receiverId, postId, giftType, amount, message } = req.body;
+      if (!receiverId || typeof receiverId !== "string") return res.status(400).json({ error: "Receiver required" });
+      if (!amount || typeof amount !== "number" || amount <= 0 || !Number.isInteger(amount)) return res.status(400).json({ error: "Invalid amount" });
+      if ((sender.coins || 0) < amount) return res.status(400).json({ error: "Insufficient coins" });
+      if (receiverId === req.session.userId) return res.status(400).json({ error: "Cannot gift yourself" });
+      const receiver = await storage.getUser(receiverId);
+      if (!receiver) return res.status(404).json({ error: "Receiver not found" });
+
+      await storage.updateUserCoins(req.session.userId!, -amount);
+      await storage.updateUserCoins(receiverId, amount);
+
+      const gift = await storage.createGift({
+        senderId: req.session.userId!,
+        receiverId,
+        postId: postId || null,
+        giftType: giftType || "coin",
+        amount,
+        message: message || null,
+      });
+
+      await storage.createTransaction({
+        userId: req.session.userId!,
+        type: "gift_sent",
+        amount: -amount,
+        description: `Gift sent`,
+        referenceId: gift.id,
+        referenceType: "gift",
+      });
+      await storage.createTransaction({
+        userId: receiverId,
+        type: "gift_received",
+        amount,
+        description: `Gift received`,
+        referenceId: gift.id,
+        referenceType: "gift",
+      });
+
+      await storage.createNotification({
+        userId: receiverId,
+        actorId: req.session.userId!,
+        type: "gift",
+        title: "Gift received!",
+        body: `sent you ${amount} coins`,
+        referenceId: postId || undefined,
+        referenceType: postId ? "post" : undefined,
+      });
+
+      res.json(gift);
+    } catch (e) {
+      res.status(400).json({ error: "Failed to send gift" });
+    }
+  });
+
+  app.get("/api/transactions", requireAuth, async (req, res) => {
+    try {
+      const txns = await storage.getTransactions(req.session.userId!);
+      res.json(txns);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
+  app.get("/api/messages/unread-count", requireAuth, async (req, res) => {
+    try {
+      const cnt = await storage.getUnreadMessageCount(req.session.userId!);
+      res.json({ count: cnt });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to get count" });
+    }
+  });
+
+  app.put("/api/users/status", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!["online", "away", "offline"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      const updated = await storage.updateUser(req.session.userId!, { status } as any);
+      if (!updated) return res.status(404).json({ error: "User not found" });
+      const { passwordHash: _, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (e) {
+      res.status(400).json({ error: "Failed to update status" });
     }
   });
 

@@ -1,20 +1,45 @@
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StoryBar } from "@/components/story-bar";
 import { PostCard } from "@/components/post-card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, MessageSquare, Plus, Coins, Search } from "lucide-react";
+import { Bell, MessageSquare, Plus, Coins, Search, Wallet, Settings, User as UserIcon, LogOut, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import type { Post, User } from "@shared/schema";
 
 export default function Feed() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: unreadCount } = useQuery<{ count: number }>({
+    queryKey: ["/api/messages/unread-count"],
+    refetchInterval: 30000,
+  });
+
+  const { data: notifData } = useQuery<any[]>({
+    queryKey: ["/api/notifications"],
+  });
+  const unreadNotifs = notifData?.filter((n: any) => !n.isRead)?.length || 0;
+
   const { data: posts, isLoading: postsLoading } = useQuery<(Post & { author: User })[]>({
     queryKey: ["/api/posts"],
   });
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-full" data-testid="page-feed">
@@ -33,12 +58,94 @@ export default function Feed() {
             <Button size="icon" variant="ghost" onClick={() => setLocation("/search")} data-testid="button-search">
               <Search className="w-5 h-5" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={() => setLocation("/notifications")} data-testid="button-notifications">
-              <Bell className="w-5 h-5" />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={() => setLocation("/messages")} data-testid="button-messages">
-              <MessageSquare className="w-5 h-5" />
-            </Button>
+            <div className="relative">
+              <Button size="icon" variant="ghost" onClick={() => setLocation("/notifications")} data-testid="button-notifications">
+                <Bell className="w-5 h-5" />
+              </Button>
+              {unreadNotifs > 0 && (
+                <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-destructive flex items-center justify-center px-1">
+                  <span className="text-[10px] font-bold text-destructive-foreground">{unreadNotifs > 99 ? "99+" : unreadNotifs}</span>
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <Button size="icon" variant="ghost" onClick={() => setLocation("/messages")} data-testid="button-messages">
+                <MessageSquare className="w-5 h-5" />
+              </Button>
+              {(unreadCount?.count || 0) > 0 && (
+                <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-destructive flex items-center justify-center px-1">
+                  <span className="text-[10px] font-bold text-destructive-foreground">{(unreadCount?.count || 0) > 99 ? "99+" : unreadCount?.count}</span>
+                </div>
+              )}
+            </div>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="relative"
+                data-testid="button-account"
+              >
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={user?.avatar || ""} />
+                  <AvatarFallback className="text-xs">{(user?.username || "U")[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-background ${
+                  user?.status === "online" ? "bg-green-500" : user?.status === "away" ? "bg-yellow-500" : "bg-muted-foreground/40"
+                }`} />
+              </button>
+              {showDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-popover border border-border rounded-md shadow-lg z-50" data-testid="account-dropdown">
+                  <div className="p-3 border-b border-border">
+                    <p className="text-sm font-semibold truncate">{user?.displayName}</p>
+                    <p className="text-xs text-muted-foreground">@{user?.username}</p>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <Coins className="w-3 h-3 text-chart-3" />
+                      <span className="text-xs font-semibold">{user?.coins?.toLocaleString() || 0} coins</span>
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover-elevate"
+                      onClick={() => { setShowDropdown(false); setLocation(`/profile/${user?.id}`); }}
+                      data-testid="dropdown-profile"
+                    >
+                      <UserIcon className="w-4 h-4 text-muted-foreground" />
+                      My Profile
+                      <ChevronRight className="w-3 h-3 text-muted-foreground ml-auto" />
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover-elevate"
+                      onClick={() => { setShowDropdown(false); setLocation("/balance"); }}
+                      data-testid="dropdown-balance"
+                    >
+                      <Wallet className="w-4 h-4 text-muted-foreground" />
+                      Balance
+                      <Badge variant="secondary" className="ml-auto text-[10px]">
+                        <Coins className="w-2.5 h-2.5 mr-0.5 text-chart-3" />{user?.coins || 0}
+                      </Badge>
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover-elevate"
+                      onClick={() => { setShowDropdown(false); setLocation("/settings"); }}
+                      data-testid="dropdown-settings"
+                    >
+                      <Settings className="w-4 h-4 text-muted-foreground" />
+                      Settings
+                      <ChevronRight className="w-3 h-3 text-muted-foreground ml-auto" />
+                    </button>
+                  </div>
+                  <div className="border-t border-border py-1">
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm text-destructive hover-elevate"
+                      onClick={() => { setShowDropdown(false); logout(); }}
+                      data-testid="dropdown-logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Log Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
