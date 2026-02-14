@@ -1,21 +1,53 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { StoryBar } from "@/components/story-bar";
 import { PostCard } from "@/components/post-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusAvatar } from "@/components/status-avatar";
-import { Bell, MessageSquare, Plus, Coins, Search, Wallet, Settings, User as UserIcon, LogOut, ChevronRight } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Bell, MessageSquare, Image, Video, Music, Lock, Loader2, Plus, Coins, Search, Wallet, Settings, User as UserIcon, LogOut, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Post, User } from "@shared/schema";
 
 export default function Feed() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [postContent, setPostContent] = useState("");
+  const [postImageUrl, setPostImageUrl] = useState("");
+  const [postCoinCost, setPostCoinCost] = useState(0);
+  const [showComposerMedia, setShowComposerMedia] = useState(false);
+  const [composerExpanded, setComposerExpanded] = useState(false);
+
+  const createPostMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/posts", {
+        content: postContent.trim(),
+        imageUrl: postImageUrl.trim() || null,
+        coinCost: postCoinCost,
+        userId: user?.id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+      toast({ title: "Post created!" });
+      setPostContent("");
+      setPostImageUrl("");
+      setPostCoinCost(0);
+      setShowComposerMedia(false);
+      setComposerExpanded(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create post", variant: "destructive" });
+    },
+  });
 
   const { data: unreadCount } = useQuery<{ count: number }>({
     queryKey: ["/api/messages/unread-count"],
@@ -150,6 +182,98 @@ export default function Feed() {
 
       <StoryBar />
 
+      {user && (
+        <div className="border-b border-border px-4 py-3" data-testid="composer-box">
+          <div className="flex gap-3">
+            <StatusAvatar
+              src={user.avatar}
+              fallback={user.username || "U"}
+              size="sm"
+              status={user.status}
+              isOnline={user.isOnline}
+              lastSeen={user.lastSeen}
+              showStatus={false}
+            />
+            <div className="flex-1 min-w-0">
+              {composerExpanded ? (
+                <Textarea
+                  autoFocus
+                  value={postContent}
+                  onChange={(e) => setPostContent(e.target.value)}
+                  placeholder="What's happening?"
+                  className="resize-none border-0 text-sm focus-visible:ring-0 min-h-[80px] p-0"
+                  data-testid="input-post-content"
+                />
+              ) : (
+                <button
+                  className="w-full text-left text-sm text-muted-foreground py-2"
+                  onClick={() => setComposerExpanded(true)}
+                  data-testid="button-expand-composer"
+                >
+                  What's happening?
+                </button>
+              )}
+
+              {composerExpanded && showComposerMedia && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    value={postImageUrl}
+                    onChange={(e) => setPostImageUrl(e.target.value)}
+                    placeholder="Image URL"
+                    className="w-full bg-muted rounded-md px-3 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
+                    data-testid="input-image-url"
+                  />
+                  {postImageUrl && (
+                    <img src={postImageUrl} alt="Preview" className="w-full rounded-md aspect-video object-cover mt-2" />
+                  )}
+                </div>
+              )}
+
+              {composerExpanded && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+                  <div className="flex items-center gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => setShowComposerMedia(!showComposerMedia)} data-testid="button-add-image">
+                      <Image className="w-4 h-4 text-chart-2" />
+                    </Button>
+                    <Button size="icon" variant="ghost" data-testid="button-add-video">
+                      <Video className="w-4 h-4 text-chart-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" data-testid="button-add-audio">
+                      <Music className="w-4 h-4 text-chart-3" />
+                    </Button>
+                    <div className="flex items-center gap-1 ml-1">
+                      <Lock className="w-3 h-3 text-muted-foreground" />
+                      <select
+                        value={postCoinCost}
+                        onChange={(e) => setPostCoinCost(Number(e.target.value))}
+                        className="bg-muted rounded-md px-1.5 py-0.5 text-[10px] outline-none"
+                        data-testid="select-coin-cost"
+                      >
+                        <option value={0}>Free</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={!postContent.trim() || createPostMutation.isPending}
+                    onClick={() => createPostMutation.mutate()}
+                    data-testid="button-publish-post"
+                  >
+                    {createPostMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                    Post
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 pb-20">
         {postsLoading ? (
           <div className="space-y-4 p-4">
@@ -185,15 +309,6 @@ export default function Feed() {
         )}
       </div>
 
-      <Button
-        variant="ghost"
-        className="fixed bottom-[4.25rem] right-4 z-40 rounded-full w-14 h-14 border border-border/50 text-muted-foreground"
-        style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: "transparent" }}
-        onClick={() => setLocation("/create")}
-        data-testid="button-create-post"
-      >
-        <Plus className="w-6 h-6" />
-      </Button>
     </div>
   );
 }
