@@ -22,8 +22,75 @@ import {
   Play,
   Settings,
   ChevronRight,
+  BookOpen,
+  Brain,
+  Orbit,
+  Lightbulb,
+  Timer,
+  FlaskConical,
+  Landmark,
+  Network,
 } from "lucide-react";
 import type { Plugin } from "@shared/schema";
+
+const myPlugins = [
+  {
+    name: "Living History",
+    description: "Interactive timeline engine that brings historical events to life with real-time data overlays and immersive storytelling",
+    icon: BookOpen,
+    iconColor: "text-chart-3",
+    status: "published" as const,
+  },
+  {
+    name: "Big Brains",
+    description: "Collaborative knowledge hub connecting thinkers, researchers, and innovators for deep intellectual discourse",
+    icon: Brain,
+    iconColor: "text-chart-4",
+    status: "published" as const,
+  },
+  {
+    name: "Live Universe Model",
+    description: "Real-time simulation of cosmic structures, galaxy formations, and astrophysical phenomena with live data feeds",
+    icon: Orbit,
+    iconColor: "text-primary",
+    status: "published" as const,
+  },
+  {
+    name: "How to Solve",
+    description: "Step-by-step problem decomposition framework with AI-assisted solution mapping for complex challenges",
+    icon: Lightbulb,
+    iconColor: "text-chart-3",
+    status: "published" as const,
+  },
+  {
+    name: "Cosmic Hourglass Model",
+    description: "Temporal analysis framework mapping cyclical patterns across civilizations, markets, and natural systems",
+    icon: Timer,
+    iconColor: "text-chart-5",
+    status: "published" as const,
+  },
+  {
+    name: "Science",
+    description: "Aggregated research pipeline with peer-review workflows, citation graphs, and experiment tracking",
+    icon: FlaskConical,
+    iconColor: "text-chart-2",
+    status: "published" as const,
+  },
+  {
+    name: "Geopolitics",
+    description: "Global intelligence dashboard tracking political dynamics, alliances, conflicts, and policy shifts in real time",
+    icon: Landmark,
+    iconColor: "text-chart-4",
+    status: "published" as const,
+  },
+  {
+    name: "Multinational & Multifunctional Systems",
+    description: "Cross-border organizational framework for managing distributed teams, operations, and multi-domain workflows",
+    icon: Network,
+    iconColor: "text-primary",
+    status: "published" as const,
+  },
+];
 
 const officialPlugins = [
   {
@@ -236,16 +303,55 @@ export default function Workspace() {
               className="border-dashed hover-elevate cursor-pointer"
               data-testid="card-create-plugin"
             >
-              <CardContent className="p-6 flex flex-col items-center justify-center text-center">
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                  <Plus className="w-7 h-7 text-primary" />
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                  <Plus className="w-5 h-5 text-primary" />
                 </div>
-                <p className="text-sm font-semibold mb-1">Create New Plugin</p>
-                <p className="text-xs text-muted-foreground max-w-[200px]">
-                  Build automation workflows with our visual editor
-                </p>
+                <div>
+                  <p className="text-sm font-semibold">Create New Plugin</p>
+                  <p className="text-xs text-muted-foreground">Build with the visual editor</p>
+                </div>
               </CardContent>
             </Card>
+
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Your Plugins</h3>
+              <div className="space-y-3">
+                {myPlugins.map((plugin) => {
+                  const Icon = plugin.icon;
+                  return (
+                    <Card key={plugin.name} className="hover-elevate" data-testid={`my-plugin-${plugin.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <CardContent className="p-3">
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
+                            style={{ background: `linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--chart-2) / 0.12))` }}
+                          >
+                            <Icon className={`w-5 h-5 ${plugin.iconColor}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <p className="text-sm font-semibold truncate">{plugin.name}</p>
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">
+                                {plugin.status === "published" ? "Live" : "Draft"}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                              {plugin.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button size="icon" variant="ghost" data-testid={`button-edit-${plugin.name.toLowerCase().replace(/\s+/g, "-")}`}>
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
 
             <div>
               <h3 className="text-sm font-semibold mb-3">Plugin Editor</h3>
@@ -257,8 +363,8 @@ export default function Workspace() {
                         <Puzzle className="w-4 h-4 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold">My Plugin</p>
-                        <p className="text-[10px] text-muted-foreground">Draft</p>
+                        <p className="text-sm font-semibold">Plugin Builder</p>
+                        <p className="text-[10px] text-muted-foreground">Visual workflow editor</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
