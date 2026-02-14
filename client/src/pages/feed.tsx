@@ -183,8 +183,8 @@ export default function Feed() {
       <StoryBar />
 
       {user && (
-        <div className="border-b border-border px-4 py-3" data-testid="composer-box">
-          <div className="flex gap-3">
+        <div className="border-b border-border/30 px-4 py-3" data-testid="composer-box">
+          <div className="flex gap-3 items-start">
             <StatusAvatar
               src={user.avatar}
               fallback={user.username || "U"}
@@ -195,24 +195,15 @@ export default function Feed() {
               showStatus={false}
             />
             <div className="flex-1 min-w-0">
-              {composerExpanded ? (
-                <Textarea
-                  autoFocus
-                  value={postContent}
-                  onChange={(e) => setPostContent(e.target.value)}
-                  placeholder="What's happening?"
-                  className="resize-none border-0 text-sm focus-visible:ring-0 min-h-[80px] p-0"
-                  data-testid="input-post-content"
-                />
-              ) : (
-                <button
-                  className="w-full text-left text-sm text-muted-foreground py-2"
-                  onClick={() => setComposerExpanded(true)}
-                  data-testid="button-expand-composer"
-                >
-                  What's happening?
-                </button>
-              )}
+              <Textarea
+                value={postContent}
+                onChange={(e) => setPostContent(e.target.value)}
+                onFocus={() => setComposerExpanded(true)}
+                placeholder="What's happening?"
+                className="resize-none border-0 bg-transparent text-sm focus-visible:ring-0 min-h-[36px] p-0 placeholder:text-muted-foreground/60"
+                style={{ height: composerExpanded ? "80px" : "36px" }}
+                data-testid="input-post-content"
+              />
 
               {composerExpanded && showComposerMedia && (
                 <div className="mt-2">
@@ -221,7 +212,7 @@ export default function Feed() {
                     value={postImageUrl}
                     onChange={(e) => setPostImageUrl(e.target.value)}
                     placeholder="Image URL"
-                    className="w-full bg-muted rounded-md px-3 py-1.5 text-xs outline-none placeholder:text-muted-foreground"
+                    className="w-full bg-transparent border-b border-border/30 px-0 py-1.5 text-xs outline-none placeholder:text-muted-foreground/50"
                     data-testid="input-image-url"
                   />
                   {postImageUrl && (
@@ -230,24 +221,24 @@ export default function Feed() {
                 </div>
               )}
 
-              {composerExpanded && (
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                  <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setShowComposerMedia(!showComposerMedia)} data-testid="button-add-image">
-                      <Image className="w-4 h-4 text-chart-2" />
-                    </Button>
-                    <Button size="icon" variant="ghost" data-testid="button-add-video">
-                      <Video className="w-4 h-4 text-chart-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" data-testid="button-add-audio">
-                      <Music className="w-4 h-4 text-chart-3" />
-                    </Button>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-0.5">
+                  <Button size="icon" variant="ghost" onClick={() => { setComposerExpanded(true); setShowComposerMedia(!showComposerMedia); }} data-testid="button-add-image">
+                    <Image className="w-4 h-4 text-primary/70" />
+                  </Button>
+                  <Button size="icon" variant="ghost" data-testid="button-add-video">
+                    <Video className="w-4 h-4 text-primary/70" />
+                  </Button>
+                  <Button size="icon" variant="ghost" data-testid="button-add-audio">
+                    <Music className="w-4 h-4 text-primary/70" />
+                  </Button>
+                  {composerExpanded && (
                     <div className="flex items-center gap-1 ml-1">
-                      <Lock className="w-3 h-3 text-muted-foreground" />
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
                       <select
                         value={postCoinCost}
                         onChange={(e) => setPostCoinCost(Number(e.target.value))}
-                        className="bg-muted rounded-md px-1.5 py-0.5 text-[10px] outline-none"
+                        className="bg-transparent text-muted-foreground text-[10px] outline-none"
                         data-testid="select-coin-cost"
                       >
                         <option value={0}>Free</option>
@@ -257,18 +248,19 @@ export default function Feed() {
                         <option value={100}>100</option>
                       </select>
                     </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={!postContent.trim() || createPostMutation.isPending}
-                    onClick={() => createPostMutation.mutate()}
-                    data-testid="button-publish-post"
-                  >
-                    {createPostMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                    Post
-                  </Button>
+                  )}
                 </div>
-              )}
+                <Button
+                  size="sm"
+                  className="rounded-full px-4"
+                  disabled={!postContent.trim() || createPostMutation.isPending}
+                  onClick={() => createPostMutation.mutate()}
+                  data-testid="button-publish-post"
+                >
+                  {createPostMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                  Post
+                </Button>
+              </div>
             </div>
           </div>
         </div>
