@@ -55,6 +55,9 @@ export default function Feed() {
             SuperApp
           </h1>
           <div className="flex items-center gap-1">
+            <Button size="icon" variant="ghost" onClick={() => setLocation("/create")} data-testid="button-create-post">
+              <Plus className="w-5 h-5" />
+            </Button>
             <Button size="icon" variant="ghost" onClick={() => setLocation("/search")} data-testid="button-search">
               <Search className="w-5 h-5" />
             </Button>
@@ -185,15 +188,6 @@ export default function Feed() {
         )}
       </div>
 
-      <Button
-        variant="ghost"
-        className="fixed bottom-[4.25rem] right-4 z-40 rounded-full w-14 h-14 border border-border/50 text-muted-foreground"
-        style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", background: "transparent" }}
-        onClick={() => setLocation("/create")}
-        data-testid="button-create-post"
-      >
-        <Plus className="w-6 h-6" />
-      </Button>
     </div>
   );
 }
